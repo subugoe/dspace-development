@@ -96,6 +96,10 @@ to administer DSpace.
                         <map:transformer name="CurateForm" src="org.dspace.app.xmlui.aspect.administrative.CurateForm"/>
                         <map:transformer name="ChoiceLookup" src="org.dspace.app.xmlui.aspect.general.ChoiceLookupTransformer"/>
             <map:transformer name="PrivateItems" src="org.dspace.app.xmlui.aspect.administrative.PrivateItems" />
+		
+			<map:transformer name="CataloguePage" src="org.dspace.app.xmlui.CatalogueEditTransformer" />
+			<map:transformer name="CatalogueUpdateResult" src="org.dspace.app.xmlui.CatalogueUpdateResultTransformer" />
+			<map:transformer name="CatalogueSelectPage" src="org.dspace.app.xmlui.CatalogueSelectTransformer" />
 		</map:transformers>
 		
 		<map:matchers default="wildcard">
@@ -112,8 +116,7 @@ to administer DSpace.
 		
 		<map:selectors>
     		<map:selector name="AuthenticatedSelector" src="org.dspace.app.xmlui.aspect.general.AuthenticatedSelector"/>
-    	</map:selectors>
-    	
+    	</map:selectors>	
     </map:components>
     
 	<map:flow language="javascript">
@@ -267,9 +270,7 @@ to administer DSpace.
 					</map:match>
 					
 					
-		
-		
-					<!--
+										<!--
 						This is the general entry / resume point for the 
 						managment of all authorizations.
 						-->
@@ -290,9 +291,19 @@ to administer DSpace.
                                             </map:match>
                                             <map:call function="startCurate"/>
 					</map:match>
-				</map:when>
+					
+					<map:match pattern="admin/catalogue/message/save">
+						<map:call function="startSaveMessage" />
+					</map:match>
+					<map:match pattern="admin/catalogue/message/add">
+						<map:call function="startAddMessage" />
+					</map:match>
+					<map:match pattern="admin/catalogue/message/remove">
+						<map:call function="startRemoveMessage" />
+					</map:match>
+				</map:when>	
 			</map:select>
-						
+			
 			<map:generate/>
 			<map:act type="CurrentActivityAction"/>
 			<map:transform type="SystemwideAlerts"/>
@@ -937,7 +948,7 @@ to administer DSpace.
                                 <map:parameter name="identifier" value="{flow-attribute:identifier}"/>
                             </map:transform>
 		        		</map:match>
-
+		        		
 		        	</map:match> <!-- if flow -->
             	</map:when>
 		    	<map:otherwise>
@@ -1006,6 +1017,35 @@ to administer DSpace.
                     </map:otherwise>
                 </map:select>
             </map:match>
+            
+            <map:match pattern="admin/catalogue/**">
+	            <map:select type="AuthenticatedSelector">
+		            <map:when test="administrator">
+						<map:match pattern="admin/catalogue/messages">
+							<map:transform type="CataloguePage">
+								<map:parameter name="catalogue" value="{request-param:catalogue}"/>
+							</map:transform>
+							<map:serialize type="xml" />
+						</map:match>
+						<map:match pattern="admin/catalogue/select">
+							<map:transform type="CatalogueSelectPage"/>
+							<map:serialize type="xml" />
+						</map:match>
+						<map:match pattern="admin/catalogue/messages/update/result">
+							<map:transform type="CatalogueUpdateResult">
+								<map:parameter name="message-catalogue" value="{flow-attribute:message-catalogue}"/>
+								<map:parameter name="message-key" value="{flow-attribute:message-key}"/>
+								<map:parameter name="action" value="{flow-attribute:action}"/>
+								<map:parameter name="result" value="{flow-attribute:result}"/>
+							</map:transform>
+							<map:serialize type="xml" />
+						</map:match>
+					</map:when>
+					<map:otherwise>
+	                    <map:act type="StartAuthentication"/>
+	                </map:otherwise>
+				</map:select>
+			</map:match>
 		    
             <map:match pattern="admin/export">
                 <map:transform type="ItemExport"/>

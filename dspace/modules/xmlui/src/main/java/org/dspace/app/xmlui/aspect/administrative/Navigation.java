@@ -77,6 +77,7 @@ public class Navigation extends AbstractDSpaceTransformer implements CacheablePr
     private static final Message T_administrative_private  		= message("xmlui.administrative.Navigation.administrative_private");
     private static final Message T_administrative_control_panel 	= message("xmlui.administrative.Navigation.administrative_control_panel");
     private static final Message T_administrative_curation              = message("xmlui.administrative.Navigation.administrative_curation");
+    private static final Message T_administrative_message_catalogues              = message("xmlui.administrative.Navigation.administrative_message_catalogues");
     
     private static final Message T_statistics            	        = message("xmlui.administrative.Navigation.statistics");
 
@@ -283,6 +284,7 @@ public class Navigation extends AbstractDSpaceTransformer implements CacheablePr
 
             // Control panel
             admin.addItemXref(contextPath+"/admin/panel", T_administrative_control_panel);
+            admin.addItemXref(contextPath+"/admin/catalogue/select", T_administrative_message_catalogues);
 
             // Access Controls
             List epeople = admin.addList("epeople");
