@@ -2040,6 +2040,42 @@
 
 	<message key="xmlui.administrative.ControlPanel.select_panel">Use the tabs above to select the information to display</message>
 
+	<message key="xmlui.administrative.Navigation.administrative_message_catalogues">Message Catalogues</message>
+	
+	<message key="xmlui.administrative.catalogue.title">Message Catalogue</message>
+	<message key="xmlui.administrative.catalogue.trail">Message Catalogue</message>
+	<message key="xmlui.administrative.catalogue.head">Message Catalogue</message>
+	<message key="xmlui.administrative.catalogue.none.provided">Please select a message catalogue.</message>
+	<message key="xmlui.administrative.catalogue.does.not.exist">The selected catalogue does not exist.</message>
+	<message key="xmlui.administrative.catalogue.not.valid">The selected catalogue is not a valid catalogue file.</message>
+	<message key="xmlui.administrative.catalogue.message.not.loading">Message catalogue could not be loaded.</message>
+	<message key="xmlui.administrative.catalogue.message.update.success">The message was successfullly updated.</message>
+	<message key="xmlui.administrative.catalogue.message.update.failure">The message could not be updated.</message>
+	<message key="xmlui.administrative.catalogue.message.add">Add new message</message>
+	<message key="xmlui.administrative.catalogue.message.delete.modal.message">Are you sure you want to delete the following key:</message>
+	<message key="xmlui.administrative.catalogue.message.delete.modal.header">Delete Message</message>
+	<message key="xmlui.administrative.catalogue.message.delete.modal.ok">Delete</message>
+	<message key="xmlui.administrative.catalogue.message.delete.modal.cancel">Cancel</message>
+	
+	<message key="xmlui.administrative.catalogue.message.description">Click the buttons next to an input field to edit or delete a message, or click “Add” to add a new message. Your changes will be made immediately. Please wait for the page to finish processing before starting another change.</message>
+	<message key="xmlui.administrative.catalogue.message.loading">Loading, please wait...</message>
+	<message key="xmlui.administrative.catalogue.message.add.modal.message.key">Key:</message>
+	<message key="xmlui.administrative.catalogue.message.add.modal.message.key.missing">Please provide a message key.</message>
+	<message key="xmlui.administrative.catalogue.message.add.modal.message.value">Text:</message>
+	<message key="xmlui.administrative.catalogue.message.add.modal.header">Add Message</message>
+	<message key="xmlui.administrative.catalogue.message.add.modal.ok">Add</message>
+	<message key="xmlui.administrative.catalogue.message.add.modal.cancel">Cancel</message>
+	<message key="xmlui.administrative.catalogue.message.server.error.add">A server error occurred and the message could not be added. Please contact a system administrator and try again later.</message>
+	<message key="xmlui.administrative.catalogue.message.server.error.delete">A server error occurred and the message could not be deleted. Please contact a system administrator and try again later.</message>
+	<message key="xmlui.administrative.catalogue.message.server.success.add">Message was successfully added.</message>
+	<message key="xmlui.administrative.catalogue.message.server.success.delete">Message was successfully deleted.</message>
+	
+	
+	<message key="xmlui.administrative.select.catalogue.title">Select Message Catalogue</message>
+	<message key="xmlui.administrative.select.catalogue.trail">Select Message Catalogue</message>
+	<message key="xmlui.administrative.select.catalogue.head">Select Message Catalogue</message>
+	<message key="xmlui.administrative.select.catalogue.list.prefix">Catalogue: </message>
+	
 	<!-- org.dspace.app.xmlui.administrative.SystemwideAlerts -->
 	<message key="xmlui.administrative.SystemwideAlerts.countdown"><strong>In {0} minutes</strong>: </message>
 
