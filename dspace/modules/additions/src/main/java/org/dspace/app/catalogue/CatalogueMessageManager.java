@@ -10,15 +10,22 @@ package org.dspace.app.catalogue;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.StringReader;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.log4j.Logger;
+import org.jdom.Attribute;
+import org.jdom.Content;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.Namespace;
+import org.jdom.Text;
 import org.jdom.input.SAXBuilder;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
@@ -80,10 +87,84 @@ public class CatalogueMessageManager {
 
         Map<String, String> messageMap = new HashMap<>();
         for (Object message : messages) {
-            messageMap.put(((Element) message).getAttributeValue("key"), ((Element) message).getText());
+            messageMap.put(((Element) message).getAttributeValue("key"), getValueAsString((Element) message));
         }
 
         return messageMap;
+    }
+    
+    /**
+     * Method that returns a string representation of a node and all
+     * its children.
+     * @param messageNode The node to turn into a string
+     * @return a piece of XML representing the passed node
+     */
+    private static String getValueAsString(Element messageNode) {
+        StringBuffer sb = new StringBuffer();
+        
+        Iterator<?> content = messageNode.getContent().iterator();
+        while(content.hasNext()) {
+            Object contentElem = content.next();
+            // we can be sure we'll only have nodes and texts here
+            if (contentElem instanceof Text) {
+                sb.append(((Text)contentElem).getText());
+            } else if (contentElem instanceof Element) {
+                Element child = (Element)contentElem;
+                
+                String contentStr = getValueAsString(child);
+                String startTag = getTagAsText(child, contentStr.isEmpty());
+                
+                sb.append(startTag);
+                if (!contentStr.isEmpty()) {
+                    sb.append(contentStr);
+                    sb.append(getEndTagAsText(child));
+                }
+            }
+            // everything else we ignore
+        }
+        String result = sb.toString();
+        return result.trim();
+    }
+    
+    /**
+     * Returns a tag as string.
+     * @param tag The tag to be turned into a string.
+     * @param isEmpty a boolean indicating if the passed tag is empty or not
+     * @return a string representation of a tag (e.g. <b>, <br/> or <a href="...">)
+     */
+    private static String getTagAsText(Element tag, boolean isEmpty) {
+        StringBuffer tagString = new StringBuffer();
+        tagString.append("<");
+        tagString.append(tag.getName());
+        List<?> attrs = tag.getAttributes();
+        if (attrs != null) {
+            for (Object attr : attrs) {
+                tagString.append(" ");
+                tagString.append(((Attribute)attr).getName());
+                tagString.append("=\"");
+                tagString.append(((Attribute)attr).getValue());
+                tagString.append("\"");
+            }
+        }
+        
+        if (isEmpty) {
+            tagString.append(" /");
+        }
+        tagString.append(">");
+        return tagString.toString();
+    }
+    
+    /**
+     * Returns the end tag for a tag.
+     * @param tag The tag an end tag is required for.
+     * @return e.g. </a> or </i>
+     */
+    private static String getEndTagAsText(Element tag) {
+        StringBuffer tagString = new StringBuffer();
+        tagString.append("</");
+        tagString.append(tag.getName());
+        tagString.append(">");
+        return tagString.toString();
     }
 
     /**
@@ -109,7 +190,11 @@ public class CatalogueMessageManager {
         Element messageNode = getMessageNode(messageKey, doc);
         
         if (messageNode != null) {
-            messageNode.setText(messageValue);
+            Collection<Content> nodes = getMessageAsNodes(messageValue);
+            if (nodes == null) {
+                throw new MessageStorageException("Invalid XML.");
+            }
+            messageNode.setContent(nodes);
             writeMessageFile(cataloguePath, doc);
         } else {
             throw new MessageStorageException("Message node does not exist.");
@@ -149,8 +234,31 @@ public class CatalogueMessageManager {
 
             root.addContent(messageNode);
         }
-        messageNode.setText(messageValue);
+        messageNode.setContent(getMessageAsNodes(messageValue));
         writeMessageFile(cataloguePath, doc);
+    }
+    
+    /**
+     * This method creates JDOM nodes for a piece of XML. It will create a dummy
+     * root node and returns all children of that root node as {@link Content} list.
+     * @param messageText The piece of XML to be turned into Content objects (e.g.
+     *      <code>Hello <i>World</i></code>.
+     * @return A collection of {@link Content} objects (without a parent) so that they 
+     *      can be added as children to another node.
+     */
+    private static Collection<Content> getMessageAsNodes(String messageText) {
+        messageText = StringEscapeUtils.UNESCAPE_XML.translate(messageText);
+        String validXML = "<dummy>" + messageText + "</dummy>";
+        SAXBuilder builder = new SAXBuilder();
+        Document doc = null;
+        try {
+            doc = builder.build(new StringReader(validXML));
+        } catch (JDOMException | IOException e1) {
+            log.error("Could not read messages file.", e1);
+            return null;
+        }
+
+        return doc.getRootElement().removeContent();
     }
 
     /**
@@ -194,10 +302,12 @@ public class CatalogueMessageManager {
     private static void writeMessageFile(String cataloguePath, Document doc) {
         XMLOutputter xmlOutput = new XMLOutputter();
 
-        // Display pretty indented XML
+        // Since we don't want white space before and after HTML tags, we can't pretty
+        // print the XML. For existing message the existing format is used; new messages
+        // are being added without pretty print.
         // Set unix-style newlines for line separators (the default is \r\n
         // carriage-return style)
-        Format format = Format.getPrettyFormat();
+        Format format = Format.getRawFormat();
         format.setLineSeparator("\n");
         xmlOutput.setFormat(format);
         try {

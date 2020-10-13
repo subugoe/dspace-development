@@ -32,6 +32,10 @@ $(function() {
 		$("#successDeleteAlert").hide();
 	})
 
+	$("#closeWarningInvalidXmlAlert").click(function() {
+		$("#warningInvalidXmlAlert").hide();
+	})
+
 	// Edit buttons
 	$('button[name="Edit"]').click(function(e) {
 		makeEditable($(this));
@@ -51,6 +55,7 @@ $(function() {
 		div.children(".result-indicator").remove();
 		div.removeClass();
 
+		elem.off("click");
 		elem.click(function() {
 			var span = elem.find("span");
 			span.removeClass();
@@ -64,6 +69,29 @@ $(function() {
 		var inputs = findTextInput(elem);
 		var text_input = inputs[0]
 		var hidden_input = inputs[1]
+
+		var isValid = isXmlValid(text_input.val());
+		if(!isValid) {
+			var div = text_input.closest("div");
+
+			// create save button
+			var span = elem.find("span");
+			span.removeClass();
+			span.addClass("glyphicon glyphicon-floppy-disk");
+
+			elem.off("click");
+			elem.click(function() {
+				var span = elem.find("span");
+				span.removeClass();
+				span.addClass("glyphicon glyphicon-repeat right-spinner");
+				saveMessage($(this))
+			});
+
+			displayFieldFeedback(div, "glyphicon-warning-sign", "(warning)", "has-warning")
+			$(".alert").hide();
+			$("#warningInvalidXmlAlert").show();
+			return;
+		}
 		$.ajax({
 			// FIXME
 			url: window.DSpace.context_path + "/admin/catalogue/message/save",
@@ -75,45 +103,44 @@ $(function() {
 			},
 			success: function(response) {
 				text_input.prop("disabled", true);
-				var span = elem.find("span");
-				span.removeClass();
-				span.addClass("glyphicon glyphicon-edit");
-				elem.off("click");
-				elem.click(function(e) {
-					makeEditable($(this));
-				});
+				showEditBtn(elem);
+
+				$(".alert").hide();
 				// remove previous success/failure indicators (if any)
 				var div = text_input.closest("div");
-				div.removeClass();
-				div.children(".result-indicator").remove();
-
-				// set new success indicator
-				div.append('<span class="result-indicator glyphicon glyphicon-ok form-control-feedback" aria-hidden="true"></span>');
-				div.append('<span class="result-indicator sr-only">(success)</span>');
-				div.addClass("has-success has-feedback");
+				displayFieldFeedback(div, "glyphicon-ok", "(success)", "has-success")
 			},
 			error: function(response) {
 				text_input.prop("disabled", true);
-				var span = elem.find("span");
-				span.removeClass();
-				span.addClass("glyphicon glyphicon-edit");
-				elem.off("click");
-				elem.click(function(e) {
-					makeEditable($(this));
-				});
+				showEditBtn(elem);
 
+				$(".alert").hide();
 				// remove previous success/failure indicators (if any)
 				var div = text_input.closest("div");
-				div.children(".result-indicator").remove();
-				div.removeClass();
-
-				// set new failure indicator
-				div.append('<span class="result-indicator glyphicon glyphicon-remove form-control-feedback" aria-hidden="true"></span>');
-				div.append('<span class="result-indicator sr-only">(error)</span>');
-				div.addClass("has-error has-feedback");
+				displayFieldFeedback(div, "glyphicon-remove", "(error)", "has-error")
 			}
 
 		})
+	}
+
+	function showEditBtn(elem) {
+		var span = elem.find("span");
+		span.removeClass();
+		span.addClass("glyphicon glyphicon-edit");
+		elem.off("click");
+		elem.click(function(e) {
+			makeEditable($(this));
+		});
+	}
+
+	function displayFieldFeedback(div, icon, indicatorText, className) {
+		div.removeClass();
+		div.children(".result-indicator").remove();
+
+		// set new success indicator
+		div.append('<span class="result-indicator glyphicon ' + icon + ' form-control-feedback" aria-hidden="true"></span>');
+		div.append('<span class="result-indicator sr-only">' + indicatorText + '</span>');
+		div.addClass(className + " has-feedback");
 	}
 
 	// Add buttons
@@ -121,10 +148,13 @@ $(function() {
 		$("#okAddBtn").click(function() {
 			var msgKey = $("#new-message-key").val();
 			if (msgKey) {
-				addMessage();
-				$("#new-message-key").val('');
-				$('#new-message-value').val('');
-				$("#addModal").modal("hide");
+				var valid = addMessage();
+				if (valid) {
+					$("#new-message-key").val('');
+					$('#new-message-value').val('');
+					$("#invalidXmlErrorMsg").hide();
+					$("#addModal").modal("hide");
+				}
 			} else {
 				$("#key-error-msg").show();
 			}
@@ -137,6 +167,11 @@ $(function() {
 
 		var newMessageKey = $("#new-message-key").val()
 		var newMessageValue = $("#new-message-value").val()
+
+		if (!isXmlValid(newMessageValue)) {
+			$("#invalidXmlErrorMsg").show();
+			return false;
+		}
 
 		$.ajax({
 			// FIXME
@@ -158,12 +193,12 @@ $(function() {
 				tr.append(td2);
 				var div = $("<div></div>");
 				td2.append(div);
-				var input = '<input id="CatalogueEditTransformer_field_text_' + newMessageKey.replace(".", "_") + '" class="ds-text-field form-control" disabled="" name="' + newMessageKey.replace(".", "_") + '" type="text" value="' + newMessageValue + '">';
+				var input = '<input id="CatalogueEditTransformer_field_text_' + newMessageKey.replaceAll(".", "_") + '" class="ds-text-field form-control" disabled="" name="' + newMessageKey.replaceAll(".", "_") + '" type="text" value="' + newMessageValue.replaceAll('"', "&quot;") + '">';
 				div.append(input);
 
 				var td3 = $("<td></td>");
 				tr.append(td3)
-				var input2 = $('<input id="CatalogueEditTransformer_field_' + newMessageKey.replace(".", "_") + '" class="ds-hidden-field form-control" name="' + newMessageKey.replace(".", "_") + '" type="hidden" value="' + newMessageKey + '">')
+				var input2 = $('<input id="CatalogueEditTransformer_field_' + newMessageKey.replaceAll(".", "_") + '" class="ds-hidden-field form-control" name="' + newMessageKey.replaceAll(".", "_") + '" type="hidden" value="' + newMessageKey + '">')
 				td3.append(input2);
 				var nobr = $("<nobr></nobr>");
 				var editBtn = $('<button name="Edit" class="btn btn-default"><span class="glyphicon glyphicon-edit"></span></button>');
@@ -179,12 +214,16 @@ $(function() {
 				td3.append(nobr);
 
 				$("#message-table").append(tr);
+				$(".alert").hide();
 				$("#successAddAlert").show();
 			},
 			error: function(response) {
+				$(".alert").hide();
 				$("#errorAddAlert").show();
 			}
 		})
+
+		return true;
 	}
 
 	// Delete buttons
@@ -216,9 +255,11 @@ $(function() {
 			success: function(response) {
 				var tr = hidden_input.closest("tr");
 				tr.remove();
+				$(".alert").hide();
 				$("#successDeleteAlert").show();
 			},
 			error: function(response) {
+				$(".alert").hide();
 				$("#errorDeleteAlert").show();
 			}
 		})
@@ -230,5 +271,15 @@ $(function() {
 		var td = elem.closest("td");
 		var hidden_input = td.find('input[type="hidden"]');
 		return [$("#CatalogueEditTransformer_field_text_" + hidden_input.attr("name")), hidden_input];
+	}
+
+	function isXmlValid(message) {
+		try {
+			var msg = $.parseXML("<root>" + message + "</root>")
+		} catch(error) {
+			console.log(error)
+			return false
+		}
+		return true
 	}
 })

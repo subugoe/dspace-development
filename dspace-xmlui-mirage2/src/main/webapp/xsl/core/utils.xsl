@@ -185,6 +185,10 @@
     	<i18n:text>xmlui.administrative.catalogue.message.server.success.delete</i18n:text>
     	<span class="pull-right" aria-hidden="true" id="closeSuccessDeleteAlert"><i class="glyphicon glyphicon-remove"></i></span>
     	</div>
+    	<div class="alert alert-warning" id="warningInvalidXmlAlert" role="alert" style="display:none">
+    	<i18n:text>xmlui.administrative.catalogue.message.server.warning.invalidxml</i18n:text>
+    	<span class="pull-right" aria-hidden="true" id="closeWarningInvalidXmlAlert"><i class="glyphicon glyphicon-remove"></i></span>
+    	</div>
    	 	<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
 		  <div class="modal-dialog" role="document">
 		    <div class="modal-content">
@@ -216,6 +220,9 @@
 		        <div id="key-error-msg" style="display:none;" class="text-danger"><small><i18n:text>xmlui.administrative.catalogue.message.add.modal.message.key.missing</i18n:text></small></div>
 		        <label><i18n:text>xmlui.administrative.catalogue.message.add.modal.message.value</i18n:text></label>
 		        <input type="text" class="form-control" id="new-message-value"></input>
+		        <div id="invalidXmlErrorMsg" class="text-danger" style="display:none;">
+		        <i18n:text>xmlui.administrative.catalogue.message.add.warning.invalidxml.message</i18n:text>
+		        </div>
 		      </div>
 		      <div class="modal-footer">
 		        <button type="button" class="btn btn-default" data-dismiss="modal"><i18n:text>xmlui.administrative.catalogue.message.add.modal.cancel</i18n:text></button>

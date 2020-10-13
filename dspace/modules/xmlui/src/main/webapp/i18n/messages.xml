@@ -2069,7 +2069,8 @@
 	<message key="xmlui.administrative.catalogue.message.server.error.delete">A server error occurred and the message could not be deleted. Please contact a system administrator and try again later.</message>
 	<message key="xmlui.administrative.catalogue.message.server.success.add">Message was successfully added.</message>
 	<message key="xmlui.administrative.catalogue.message.server.success.delete">Message was successfully deleted.</message>
-	
+	<message key="xmlui.administrative.catalogue.message.server.warning.invalidxml">The HTML you have entered is not well formed. Please make sure all opening tags have a closing tag.</message>
+	<message key="xmlui.administrative.catalogue.message.add.warning.invalidxml.message">The HTML you have entered is not well formed. Please make sure all opening tags have a closing tag.</message>
 	
 	<message key="xmlui.administrative.select.catalogue.title">Select Message Catalogue</message>
 	<message key="xmlui.administrative.select.catalogue.trail">Select Message Catalogue</message>
