@@ -100,7 +100,7 @@ public class DOIOrganiser {
 
         options.addOption("h", "help", false, "Help");
         options.addOption("l", "list", false,
-                "List all objects to be reserved, registered, deleted of updated ");
+                "List all objects to be reserved, registered, deleted or updated ");
         options.addOption("r", "register-all", false,
                 "Perform online registration for all identifiers queued for registration.");
         options.addOption("s", "reserve-all", false,
@@ -360,7 +360,7 @@ public class DOIOrganiser {
         
         if(line.hasOption("update-doi"))
         {
-            String identifier = line.getOptionValue('u');
+            String identifier = line.getOptionValue("update-doi");
             
             if(null == identifier)
             {
