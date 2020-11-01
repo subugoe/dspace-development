@@ -81,6 +81,10 @@ public class DOIIdentifierException extends IdentifierException {
      * You tried to reserve or register a DOI that is marked as DELETED.
      */
     public static final int DOI_IS_DELETED = 13;
+    /**
+     * An error occurred during registration.
+     */
+    public static final int REGISTRATION_ERROR = 14;
     
     private int code;
 
@@ -113,6 +117,8 @@ public class DOIIdentifierException extends IdentifierException {
                 return "UNAUTHORIZED_METADATA_MANIPULATION";
             case DOI_IS_DELETED:
                 return "DELETED";
+            case REGISTRATION_ERROR:
+                return "REGISTRATION ERROR";
             default:
                 return "UNKOWN";
         }
