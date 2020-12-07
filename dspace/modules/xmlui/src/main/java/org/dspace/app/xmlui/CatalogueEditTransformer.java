@@ -29,6 +29,7 @@ import org.dspace.app.xmlui.wing.element.PageMeta;
 import org.dspace.app.xmlui.wing.element.Row;
 import org.dspace.app.xmlui.wing.element.Table;
 import org.dspace.app.xmlui.wing.element.Text;
+import org.dspace.app.xmlui.wing.element.TextArea;
 import org.dspace.authorize.AuthorizeException;
 import org.xml.sax.SAXException;
 
@@ -104,8 +105,9 @@ public class CatalogueEditTransformer extends AbstractDSpaceTransformer {
                     nameCell.addContent(key);
 
                     Cell valueCell = row.addCell(null, null, "catalogue-message-value");
-                    Text text = valueCell.addText("text_" + key);
+                    TextArea text = valueCell.addTextArea("text_" + key);
                     text.setDisabled();
+                    text.setSize(3, 18);
                     text.setValue(message.getValue());
 
                     Cell btnCell = row.addCell();

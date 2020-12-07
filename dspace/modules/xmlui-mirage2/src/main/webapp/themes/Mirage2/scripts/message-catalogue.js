@@ -193,7 +193,8 @@ $(function() {
 				tr.append(td2);
 				var div = $("<div></div>");
 				td2.append(div);
-				var input = '<input id="CatalogueEditTransformer_field_text_' + newMessageKey.replaceAll(".", "_") + '" class="ds-text-field form-control" disabled="" name="' + newMessageKey.replaceAll(".", "_") + '" type="text" value="' + newMessageValue.replaceAll('"', "&quot;") + '">';
+				var input = $('<textarea cols="18" rows="3" id="CatalogueEditTransformer_field_text_' + newMessageKey.replaceAll(".", "_") + '" class="ds-text-field form-control" disabled="" name="' + newMessageKey.replaceAll(".", "_") + '" />') ;
+				input.val(newMessageValue.replaceAll('"', "&quot;"));
 				div.append(input);
 
 				var td3 = $("<td></td>");
