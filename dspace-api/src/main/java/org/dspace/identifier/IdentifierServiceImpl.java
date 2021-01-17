@@ -11,6 +11,7 @@ import org.apache.log4j.Logger;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.DSpaceObject;
 import org.dspace.core.Context;
+import org.dspace.identifier.doi.DOIIdentifierNotApplicableException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Required;
 
@@ -51,6 +52,7 @@ public class IdentifierServiceImpl implements IdentifierService {
      * @param context dspace context
      * @param dso dspace object
      */
+    @Override
     public void reserve(Context context, DSpaceObject dso) throws AuthorizeException, SQLException, IdentifierException {
         for (IdentifierProvider service : providers)
         {
@@ -67,7 +69,12 @@ public class IdentifierServiceImpl implements IdentifierService {
         {
             if(service.supports(identifier))
             {
-                service.reserve(context, dso, identifier);
+                try {
+                    service.reserve(context, dso, identifier);
+                }
+                catch(DOIIdentifierNotApplicableException e) {
+                    log.warn("DOI Identifier not reserved (inapplicable): " + e.getMessage());
+                }
             }
         }
         //Update our item
@@ -80,7 +87,11 @@ public class IdentifierServiceImpl implements IdentifierService {
         // Next resolve all other services
         for (IdentifierProvider service : providers)
         {
-            service.register(context, dso);
+            try {
+                service.register(context, dso);
+            } catch(DOIIdentifierNotApplicableException e) {
+                log.warn("DOI Identifier not registered (inapplicable): " + e.getMessage());
+            }
         }
         dso.resetIdentifiersCache();
         //Update our item
@@ -97,8 +108,12 @@ public class IdentifierServiceImpl implements IdentifierService {
         {
             if (service.supports(identifier))
             {
-                service.register(context, object, identifier);
-                registered = true;
+                try {
+                    service.register(context, object, identifier);
+                    registered = true;
+                } catch(DOIIdentifierNotApplicableException e) {
+                    log.warn("DOI Identifier not registered (inapplicable): " + e.getMessage());
+                }
             }
         }
         if (!registered)
@@ -206,6 +221,7 @@ public class IdentifierServiceImpl implements IdentifierService {
         return identifiers.toArray(new String[0]);
     }
 
+    @Override
     public DSpaceObject resolve(Context context, String identifier) throws IdentifierNotFoundException, IdentifierNotResolvableException{
         for (IdentifierProvider service : providers)
         {
@@ -235,6 +251,7 @@ public class IdentifierServiceImpl implements IdentifierService {
         return null;
     }
 
+    @Override
     public void delete(Context context, DSpaceObject dso) throws AuthorizeException, SQLException, IdentifierException {
        for (IdentifierProvider service : providers)
        {

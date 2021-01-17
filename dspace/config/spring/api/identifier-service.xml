@@ -35,6 +35,10 @@
 
     <!-- In order to mint DOIs with DSpace, get an agreement with a DOI registration
          agency,  take a look into dspace.cfg, and uncomment this.
+
+         An optional 'filterService' property may be included with a reference to a bean name
+         as configured in item-filters.xml
+
     <bean id="org.dspace.identifier.DOIIdentifierProvider"
         class="org.dspace.identifier.DOIIdentifierProvider"
         scope="singleton">
@@ -42,9 +46,12 @@
             ref="org.dspace.services.ConfigurationService" />
         <property name="DOIConnector"
             ref="org.dspace.identifier.doi.DOIConnector" />
+            
+        <!-- Configure the "has_bistream_filter" for DOI registration use -->
+        <property name="filterService" ref="has_bitstream_filter"/>
     </bean>
     -->
-    
+
     <!-- The DOIConnector will handle the API calls to your DOI registration
          agency for the DOIIdentifierProvider. If your registration agency
          tells you to use the DataCite API directly, you can use the
@@ -67,9 +74,9 @@
 
     <!-- Provider to mint and register DOIs using EZID as the registrar.
     -->
-    <!-- 
+    <!--
          Set generateDataciteXML to true to send metadata in DataCite xml schema for EZID DOI mint requests.
-         When generateDataciteXML is enabled, EZIDIdentifierProvider uses 
+         When generateDataciteXML is enabled, EZIDIdentifierProvider uses
          dspace.cfg:crosswalk.dissemination.DataCite.stylesheet XSL configuration for metadata mapping
     -->
     <!-- Uncomment to enable DOI using EZID

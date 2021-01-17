@@ -8,10 +8,15 @@
 
 package org.dspace.identifier;
 
-import java.util.Locale;
+import java.sql.SQLException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.dspace.content.DSpaceObject;
+import org.dspace.core.Context;
 import org.dspace.identifier.doi.DOIIdentifierException;
+import org.dspace.storage.rdbms.DatabaseManager;
+import org.dspace.storage.rdbms.TableRow;
 
 /**
  * DOI identifiers.
@@ -100,5 +105,30 @@ public class DOI
         }
         throw new DOIIdentifierException(identifier + "does not seem to be a DOI.",
                 DOIIdentifierException.UNRECOGNIZED);
+    }
+    
+    /**
+     * This method should be equivalent to the 6.x services findDOIByDSpaceObject - at least, it is used in the
+     * same places in 5.x code
+     * @param context current user's context
+     * @param dso the DSO to check
+     * @return table row with doi infomration
+     * @throws SQLException
+     */
+    public static TableRow findDOIByDSpaceObject(Context context, DSpaceObject dso) throws DOIIdentifierException {
+        TableRow checkRow = null;
+        try {
+            // The below database operation should be equivalent to the 6.x
+            // "findDOIByDSpaceObject" method
+            String sql = "SELECT * FROM Doi WHERE resource_type_id = ? " +
+                "AND resource_id = ? AND ((status != ? AND status != ?) OR status IS NULL)";
+            checkRow = DatabaseManager.querySingleTable(context, "Doi", sql,
+                dso.getType(), dso.getID(), DOIIdentifierProvider.TO_BE_DELETED,
+                DOIIdentifierProvider.DELETED);
+        } catch(SQLException e) {
+            throw new DOIIdentifierException(e);
+        }
+
+        return checkRow;
     }
 }
