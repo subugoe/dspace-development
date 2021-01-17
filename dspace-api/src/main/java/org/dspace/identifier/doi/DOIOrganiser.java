@@ -51,12 +51,14 @@ public class DOIOrganiser {
     private DOIIdentifierProvider provider;
     private Context context;
     private boolean quiet;
+    protected Boolean skipFilter;
 
     public DOIOrganiser(Context context, DOIIdentifierProvider provider)
     {
         this.context = context;
         this.provider = provider;
         this.quiet = false;
+        this.skipFilter = false;
     }
 
     public static void main(String[] args)
@@ -112,7 +114,10 @@ public class DOIOrganiser {
         
         options.addOption("q", "quiet", false,
                 "Turn the command line output off.");
-        
+
+        options.addOption(null,"skip-filter",false,"Skip the configured item filter when registering " +
+            "or reserving.");
+
         Option registerDoi = OptionBuilder.withArgName("DOI|ItemID|handle")
                 .withLongOpt("register-doi")
                 .hasArgs(1)
@@ -176,7 +181,7 @@ public class DOIOrganiser {
         {
             organiser.setQuiet();
         }
-        
+
         if (line.hasOption('l'))
         {
             organiser.list("reservation", null, null, DOIIdentifierProvider.TO_BE_RESERVED);
@@ -186,6 +191,12 @@ public class DOIOrganiser {
                     DOIIdentifierProvider.UPDATE_REGISTERED,
                     DOIIdentifierProvider.UPDATE_RESERVED);
             organiser.list("deletion", null, null, DOIIdentifierProvider.TO_BE_DELETED);
+        }
+
+        // Should we skip the filter?
+        if(line.hasOption("skip-filter")) {
+            System.out.println("Skipping the item filter");
+            organiser.skipFilter = true;
         }
 
         if (line.hasOption('s'))
@@ -212,6 +223,8 @@ public class DOIOrganiser {
             } catch (SQLException ex) {
                 System.err.println("Error in database connection:" + ex.getMessage());
                 ex.printStackTrace(System.err);
+            } catch(DOIIdentifierNotApplicableException e) {
+                System.err.println("DOI not reserved: " + e.getMessage());
             }
         }
 
@@ -238,6 +251,10 @@ public class DOIOrganiser {
             } catch (SQLException ex) {
                 System.err.println("Error in database connection:" + ex.getMessage());
                 ex.printStackTrace(System.err);
+            } catch(DOIIdentifierNotApplicableException e) {
+                System.err.println("DOI not registered: " + e.getMessage());
+            } catch(DOIIdentifierException ex) {
+                System.err.println("Error registering DOI identifier:" + ex.getMessage());
             }
         }
         
@@ -346,6 +363,9 @@ public class DOIOrganiser {
                             doiRow.getIntColumn("resource_type_id"),
                             doiRow.getIntColumn("resource_id"));
                     organiser.register(doiRow, dso);
+                } catch (DOIIdentifierNotApplicableException ex) {
+                    System.out.println(ex.getMessage());
+                    LOG.error(ex);
                 } catch (SQLException ex) {
                     LOG.error(ex);
                 } catch (IllegalArgumentException ex) {
@@ -389,7 +409,7 @@ public class DOIOrganiser {
         
         if(line.hasOption("delete-doi"))
         {
-            String identifier = line.getOptionValue('d');
+            String identifier = line.getOptionValue("delete-doi");
 
             if (null == identifier) 
             {
@@ -493,8 +513,8 @@ public class DOIOrganiser {
         }
     }
 
-    public void register(TableRow doiRow, DSpaceObject dso) throws SQLException
-    {
+    public void register(TableRow doiRow, DSpaceObject dso, Boolean skipFilter)
+        throws SQLException, DOIIdentifierException {
         if (Constants.ITEM != dso.getType())
         {
             throw new IllegalArgumentException("Currenty DSpace supports DOIs for Items only.");
@@ -502,7 +522,7 @@ public class DOIOrganiser {
         
         try {
             provider.registerOnline(context, dso,
-                    DOI.SCHEME + doiRow.getStringColumn("doi"));
+                    DOI.SCHEME + doiRow.getStringColumn("doi"), skipFilter);
             
             if(!quiet)
             {
@@ -574,9 +594,23 @@ public class DOIOrganiser {
             throw new RuntimeException("Error while trying to get data from database", ex);
         }
     }
-    
-    public void reserve(TableRow doiRow, DSpaceObject dso) throws SQLException
-    {
+
+    public void register(TableRow doiRow, DSpaceObject dso) throws SQLException, DOIIdentifierException {
+        if(this.skipFilter) {
+            System.out.println("Skipping the filter for " + doiRow.getStringColumn("doi"));
+        }
+        register(doiRow, dso, this.skipFilter);
+    }
+
+    public void reserve(TableRow doiRow, DSpaceObject dso) throws SQLException, DOIIdentifierNotApplicableException {
+        if(this.skipFilter) {
+            System.out.println("Skipping the filter for " + doiRow.getStringColumn("doi"));
+        }
+        reserve(doiRow, dso, this.skipFilter);
+    }
+
+    public void reserve(TableRow doiRow, DSpaceObject dso, Boolean skipFilter)
+        throws SQLException, DOIIdentifierNotApplicableException {
         if (Constants.ITEM != dso.getType())
         {
             throw new IllegalArgumentException("Currenty DSpace supports DOIs for Items only.");
@@ -585,7 +619,7 @@ public class DOIOrganiser {
         try 
         {
             provider.reserveOnline(context, dso, 
-                    DOI.SCHEME + doiRow.getStringColumn("doi"));
+                    DOI.SCHEME + doiRow.getStringColumn("doi"), skipFilter);
             
             if(!quiet)
             {
@@ -826,7 +860,7 @@ public class DOIOrganiser {
                 //Check if this Item has an Identifier, mint one if it doesn't
                 if (null == doiRow) 
                 {
-                    doi = provider.mint(context, dso);
+                    doi = provider.mint(context, dso, this.skipFilter);
                     doiRow = DatabaseManager.findByUnique(context, "Doi", "doi",
                     doi.substring(DOI.SCHEME.length()));
                     return doiRow;
@@ -857,7 +891,7 @@ public class DOIOrganiser {
 
             if (null == doiRow) 
             {
-                doi = provider.mint(context, dso);
+                doi = provider.mint(context, dso, this.skipFilter);
                 doiRow = DatabaseManager.findByUnique(context, "Doi", "doi",
                         doi.substring(DOI.SCHEME.length()));
             }
