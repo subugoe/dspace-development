@@ -718,6 +718,7 @@
 	<message key="xmlui.Submission.submit.progressbar.initial-questions">Initial Questions</message>
 	<message key="xmlui.Submission.submit.progressbar.describe">Describe</message>
     <message key="xmlui.Submission.submit.progressbar.access">Access</message>
+	<message key="xmlui.Submission.submit.progressbar.doi">DOI</message>
     <message key="xmlui.Submission.submit.progressbar.upload">Upload</message>
 	<message key="xmlui.Submission.submit.progressbar.verify">Review</message>
 	<message key="xmlui.Submission.submit.progressbar.creative-commons">Creative Commons</message>
@@ -777,6 +778,14 @@
 	<message key="xmlui.Submission.submit.DescribeStep.controlledvocabulary.loading">Please wait while the controlled vocabulary is loading.</message>
 	<message key="xmlui.Submission.submit.DescribeStep.controlledvocabulary.error">There was an issue when loading the controlled vocabulary, please try again later.</message>
 
+	<!-- org.dspace.app.xmlui.Submission.submit.AddDoiStep -->
+	<message key="xmlui.Submission.submit.AddDoiStep.btn">Add DOI to item</message>
+	<message key="xmlui.Submission.submit.AddDoiStep.done.btn">DOI created</message>
+	<message key="xmlui.Submission.submit.itemDOI.created">This item will get the DOI {0}.</message>
+	<message key="xmlui.Submission.submit.AddDoiStep.head">DOI</message>
+	<message key="xmlui.Submission.submit.AddDoiStep.section_head">Create DOI for Item</message>
+	<message key="xmlui.Submission.submit.itemDOI.no_doi">There will be no DOI created for this item.</message>
+	<message key="xmlui.Submission.submit.itemDOI.note">Note that this item might get a DOI by default if there is a filter set that evaluates a later state of this item.</message>
 
     <!-- org.dspace.app.xmlui.Submission.submit.AccessStep -->
     <message key="xmlui.Submission.submit.AccessStep.head">Access Settings</message>
@@ -1624,12 +1633,14 @@
 	<message key="xmlui.administrative.item.EditItemStatusForm.label_modified">Last Modified</message>
 	<message key="xmlui.administrative.item.EditItemStatusForm.label_in">In Collections</message>
 	<message key="xmlui.administrative.item.EditItemStatusForm.label_page">Item Page</message>
+	<message key="xmlui.administrative.item.EditItemStatusForm.label_doi">DOI</message>
 	<message key="xmlui.administrative.item.EditItemStatusForm.label_auth">Edit item's authorization policies</message>
 	<message key="xmlui.administrative.item.EditItemStatusForm.label_withdraw">Withdraw item from the repository</message>
 	<message key="xmlui.administrative.item.EditItemStatusForm.label_reinstate">Reinstate item into the repository</message>
 	<message key="xmlui.administrative.item.EditItemStatusForm.label_move">Move item to another collection</message>
 	<message key="xmlui.administrative.item.EditItemStatusForm.label_delete">Completely expunge item</message>
 	<message key="xmlui.administrative.item.EditItemStatusForm.submit_authorizations">Authorizations...</message>
+	<message key="xmlui.administrative.item.EditItemStatusForm.submit_register_doi">Register DOI</message>
 	<message key="xmlui.administrative.item.EditItemStatusForm.submit_withdraw">Withdraw...</message>
 	<message key="xmlui.administrative.item.EditItemStatusForm.submit_reinstate">Reinstate...</message>
 	<message key="xmlui.administrative.item.EditItemStatusForm.submit_move">Move...</message>

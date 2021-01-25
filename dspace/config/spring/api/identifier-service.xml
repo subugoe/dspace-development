@@ -37,18 +37,17 @@
          agency,  take a look into dspace.cfg, and uncomment this.
 
          An optional 'filterService' property may be included with a reference to a bean name
-         as configured in item-filters.xml
-
+         as configured in item-filters.xml -->
+    <!--
     <bean id="org.dspace.identifier.DOIIdentifierProvider"
         class="org.dspace.identifier.DOIIdentifierProvider"
         scope="singleton">
+        <property name="filterService" ref="is_false_filter"/>
         <property name="configurationService"
             ref="org.dspace.services.ConfigurationService" />
         <property name="DOIConnector"
             ref="org.dspace.identifier.doi.DOIConnector" />
-            
-        <!-- Configure the "has_bistream_filter" for DOI registration use -->
-        <property name="filterService" ref="has_bitstream_filter"/>
+
     </bean>
     -->
 
@@ -60,7 +59,7 @@
          registration agency provides their own API, you have to implement a
          DOIConnector.
     -->
-    <!-- Uncomment this to use the DataCite API directly as DOIConnector.
+    <!-- Uncomment this to use the DataCite API directly as DOIConnector. -->
     <bean id="org.dspace.identifier.doi.DOIConnector"
         class="org.dspace.identifier.doi.DataCiteConnector"
         scope="singleton">
@@ -70,7 +69,7 @@
         <property name='DATACITE_METADATA_PATH' value='/metadata/' />
         <property name='disseminationCrosswalkName' value="DataCite" />
     </bean>
-    -->
+
 
     <!-- Uncomment this to register your DOIs with CrossRef.
     <bean id="org.dspace.identifier.doi.DOIConnector"
