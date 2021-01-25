@@ -2,6 +2,7 @@ package org.dspace.identifier;
 
 import java.sql.SQLException;
 
+import org.apache.log4j.Logger;
 import org.dspace.content.DSpaceObject;
 import org.dspace.content.logic.Filter;
 import org.dspace.core.Context;
@@ -23,17 +24,14 @@ public abstract class FilteredIdentifierProvider extends IdentifierProvider {
 
     }
 
-    @Autowired
     public FilteredIdentifierProvider(Filter filterService) {
         this.filterService = filterService;
     }
-
-    @Autowired
+    
     public void setFilterService(Filter filterService) {
         this.filterService = filterService;
     }
-
-    @Autowired
+    
     public Filter getFilterService() {
         return this.filterService;
     }

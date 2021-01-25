@@ -95,7 +95,6 @@ public class DOIIdentifierProvider extends FilteredIdentifierProvider {
         super();
     }
 
-    @Autowired
     protected DOIIdentifierProvider(Filter filterService) {
         super(filterService);
     }

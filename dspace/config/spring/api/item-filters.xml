@@ -46,6 +46,16 @@
         </property>
     </bean>
 
+    <!-- always returns false -->
+    <bean id="false_condition"
+        class="org.dspace.content.logic.condition.SimpleBooleanCondition">
+        <property name="parameters">
+          <map>
+              <entry key="condition" value="false"/>
+          </map>
+        </property>
+    </bean>
+
     <!-- DEFINE OPERATORS -->
 
     <!-- DEFINE FILTERS -->
@@ -56,5 +66,13 @@
             <ref bean="has_bitstream_condition"/>
         </property>
     </bean>
+
+    <!-- A simple filter that will always return false -->
+    <bean id="is_false_filter" class="org.dspace.content.logic.DefaultFilter">
+        <property name="statement">
+            <ref bean="false_condition"/>
+        </property>
+    </bean>
+
 
 </beans>
