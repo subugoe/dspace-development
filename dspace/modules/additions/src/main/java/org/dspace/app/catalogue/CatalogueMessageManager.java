@@ -13,19 +13,15 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.log4j.Logger;
-import org.jdom.Attribute;
 import org.jdom.Content;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.Namespace;
-import org.jdom.Text;
 import org.jdom.input.SAXBuilder;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
@@ -72,17 +68,12 @@ public class CatalogueMessageManager {
         }
         
         Element root = doc.getRootElement();
-        Namespace ns = doc.getRootElement().getNamespace();
+        Namespace ns = root.getNamespace();
         List<?> messages;
         if (ns != null) {
             messages = root.getChildren(MESSAGE_NODE_NAME, ns);
         } else {
             messages = root.getChildren(MESSAGE_NODE_NAME);
-        }
-
-        // some files use a default namespace
-        if (messages.isEmpty()) {
-
         }
 
         Map<String, String> messageMap = new HashMap<>();
@@ -101,70 +92,8 @@ public class CatalogueMessageManager {
      */
     private static String getValueAsString(Element messageNode) {
         StringBuffer sb = new StringBuffer();
-        
-        Iterator<?> content = messageNode.getContent().iterator();
-        while(content.hasNext()) {
-            Object contentElem = content.next();
-            // we can be sure we'll only have nodes and texts here
-            if (contentElem instanceof Text) {
-                sb.append(((Text)contentElem).getText());
-            } else if (contentElem instanceof Element) {
-                Element child = (Element)contentElem;
-                
-                String contentStr = getValueAsString(child);
-                String startTag = getTagAsText(child, contentStr.isEmpty());
-                
-                sb.append(startTag);
-                if (!contentStr.isEmpty()) {
-                    sb.append(contentStr);
-                    sb.append(getEndTagAsText(child));
-                }
-            }
-            // everything else we ignore
-        }
-        String result = sb.toString();
-        return result.trim();
-    }
-    
-    /**
-     * Returns a tag as string.
-     * @param tag The tag to be turned into a string.
-     * @param isEmpty a boolean indicating if the passed tag is empty or not
-     * @return a string representation of a tag (e.g. <b>, <br/> or <a href="...">)
-     */
-    private static String getTagAsText(Element tag, boolean isEmpty) {
-        StringBuffer tagString = new StringBuffer();
-        tagString.append("<");
-        tagString.append(tag.getName());
-        List<?> attrs = tag.getAttributes();
-        if (attrs != null) {
-            for (Object attr : attrs) {
-                tagString.append(" ");
-                tagString.append(((Attribute)attr).getName());
-                tagString.append("=\"");
-                tagString.append(((Attribute)attr).getValue());
-                tagString.append("\"");
-            }
-        }
-        
-        if (isEmpty) {
-            tagString.append(" /");
-        }
-        tagString.append(">");
-        return tagString.toString();
-    }
-    
-    /**
-     * Returns the end tag for a tag.
-     * @param tag The tag an end tag is required for.
-     * @return e.g. </a> or </i>
-     */
-    private static String getEndTagAsText(Element tag) {
-        StringBuffer tagString = new StringBuffer();
-        tagString.append("</");
-        tagString.append(tag.getName());
-        tagString.append(">");
-        return tagString.toString();
+        sb.append(new XMLOutputter().outputString(messageNode.getContent()));
+        return sb.toString().trim();
     }
 
     /**
@@ -211,9 +140,11 @@ public class CatalogueMessageManager {
      * @param messageValue The message value
      * @throws CatalogueDoesNotExistException Thrown if no catalogue can be found
      *                                        for the provided catalogue id.
+     * @throws MessageStorageException Thrown if a message could not be stored 
+     *                                        (e.g. because of invalid XML)
      */
     public static void addMessage(String catalogue, String messageKey, String messageValue)
-            throws CatalogueDoesNotExistException {
+            throws CatalogueDoesNotExistException, MessageStorageException {
         String cataloguePath = MessageCatalogueProvider.getCatalogue(catalogue);
         if (cataloguePath == null) {
             throw new CatalogueDoesNotExistException("Catalogue " + catalogue + " does not exist.");
@@ -234,7 +165,13 @@ public class CatalogueMessageManager {
 
             root.addContent(messageNode);
         }
-        messageNode.setContent(getMessageAsNodes(messageValue));
+        
+        Collection<Content> nodes = getMessageAsNodes(messageValue);
+        if (nodes == null) {
+            throw new MessageStorageException("Message could not be stored.");
+        }
+        messageNode.setContent(nodes);
+        
         writeMessageFile(cataloguePath, doc);
     }
     
@@ -247,7 +184,6 @@ public class CatalogueMessageManager {
      *      can be added as children to another node.
      */
     private static Collection<Content> getMessageAsNodes(String messageText) {
-        messageText = StringEscapeUtils.UNESCAPE_XML.translate(messageText);
         String validXML = "<dummy>" + messageText + "</dummy>";
         SAXBuilder builder = new SAXBuilder();
         Document doc = null;

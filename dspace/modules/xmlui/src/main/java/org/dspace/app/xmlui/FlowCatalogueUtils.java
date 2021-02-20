@@ -53,13 +53,13 @@ public class FlowCatalogueUtils {
         return result;
     }
 
-    public static FlowResult addMessage(Request request) throws CatalogueDoesNotExistException {
+    public static FlowResult addMessage(Request request) throws CatalogueDoesNotExistException, MessageStorageException {
         FlowResult result = new FlowResult();
         try {
             CatalogueMessageManager.addMessage(request.get("message-catalogue") + "", request.get("message-key") + "",
                     request.get("message-value") + "");
-        } catch (CatalogueDoesNotExistException e) {
-            log.error("Catalogue does not exist.", e);
+        } catch (CatalogueDoesNotExistException | MessageStorageException e) {
+            log.error("Adding message failed.", e);
             throw e;
         }
 
