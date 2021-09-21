@@ -13,6 +13,7 @@ import org.dspace.content.WorkspaceItem;
 import org.dspace.core.Context;
 import org.dspace.identifier.IdentifierException;
 import org.dspace.identifier.IdentifierService;
+import org.dspace.identifier.doi.DOIIdentifierNotApplicableException;
 import org.dspace.utils.DSpace;
 
 import java.io.IOException;
@@ -20,6 +21,8 @@ import java.sql.SQLException;
 import java.util.List;
 import org.dspace.authorize.AuthorizeManager;
 import org.dspace.authorize.ResourcePolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -30,6 +33,8 @@ import org.dspace.authorize.ResourcePolicy;
  */
 public class DefaultItemVersionProvider extends AbstractVersionProvider implements ItemVersionProvider
 {
+
+    private static final Logger log = LoggerFactory.getLogger(DefaultItemVersionProvider.class);
 
     public Item createNewItemAndAddItInWorkspace(Context context, Item nativeItem) {
         try
@@ -81,9 +86,13 @@ public class DefaultItemVersionProvider extends AbstractVersionProvider implemen
             copyMetadata(itemNew, previousItem);
             createBundlesAndAddBitstreams(c, itemNew, previousItem);
             IdentifierService identifierService = new DSpace().getSingletonService(IdentifierService.class);
-            try
-            {
+            try {
                 identifierService.reserve(c, itemNew);
+            } catch(DOIIdentifierNotApplicableException e) {
+                // This exception is a non-fatal indicator that the item filter has filtered this item from
+                // having an identifier applied, so we can just log a message and silently continue
+                log.debug("Identifier was not reserved due to a 'false' evaluation from the filtered item provider " +
+                    " : " + itemNew.getID() + " : " + e.getMessage());
             } catch (IdentifierException e) {
                 throw new RuntimeException("Can't create Identifier!");
             }
