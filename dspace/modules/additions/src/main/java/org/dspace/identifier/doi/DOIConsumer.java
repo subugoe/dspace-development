@@ -46,13 +46,13 @@ public class DOIConsumer implements Consumer
     public void consume(Context ctx, Event event) throws Exception {
         if (event.getSubjectType() != Constants.ITEM)
         {
-            log.warn("DOIConsumer should not have been given this kind of "
+            log.debug("DOIConsumer should not have been given this kind of "
                     + "subject in an event, skipping: " + event.toString());
             return;
         }
         if (Event.MODIFY_METADATA != event.getEventType())
         {
-            log.warn("DOIConsumer should not have been given this kind of "
+            log.debug("DOIConsumer should not have been given this kind of "
                     + "event type, skipping: " + event.toString());
             return;
         }
@@ -61,8 +61,9 @@ public class DOIConsumer implements Consumer
         //FIXME
         if (!(dso instanceof Item))
         {
-            log.warn("DOIConsumer got an event whose subject was not an item, "
+            log.debug("DOIConsumer got an event whose subject was not an item, "
                     + "skipping: " + event.toString());
+            return;
         }
         Item item = (Item) dso;
         
@@ -75,8 +76,9 @@ public class DOIConsumer implements Consumer
         }
         catch (IdentifierNotFoundException ex)
         {
-            log.warn("DOIConsumer cannot handles items without DOIs, skipping: "
+            log.info("DOIConsumer cannot handles items without DOIs, skipping: "
                     + event.toString());
+            return;
         }
         try
         {
