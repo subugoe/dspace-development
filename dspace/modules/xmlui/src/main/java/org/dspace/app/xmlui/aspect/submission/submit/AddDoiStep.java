@@ -99,18 +99,22 @@ public class AddDoiStep extends AbstractSubmissionStep {
     @Override
     public List addReviewSection(List reviewList)
             throws SAXException, WingException, UIException, SQLException, IOException, AuthorizeException {
-        // Create a new list section for this step (and set its heading)
-        List doiSection = reviewList.addList("submit-review-" + this.stepAndPage, List.TYPE_FORM);
-        doiSection.setHead(T_head);
-        
-        Item item = submission.getItem();
-        String itemDoi = DOIIdentifierProvider.getDOIByObject(context, item);
-        if (itemDoi != null && !itemDoi.isEmpty()) {
-            doiSection.addItem().addContent(T_itemDoi.parameterize(itemDoi));
-        } else {
-            doiSection.addItem().addContent(T_itemDoi_no_doi);
-        }
-        return doiSection;
+        /* uncomment this code and remove the final "return null;" to show 
+         * the addDoiStep as part of the verifyStep.
+         * // Create a new list section for this step (and set its heading)
+         * List doiSection = reviewList.addList("submit-review-" + this.stepAndPage, List.TYPE_FORM);
+         * doiSection.setHead(T_head);
+         * 
+         * Item item = submission.getItem();
+         * String itemDoi = DOIIdentifierProvider.getDOIByObject(context, item);
+         * if (itemDoi != null && !itemDoi.isEmpty()) {
+         *     doiSection.addItem().addContent(T_itemDoi.parameterize(itemDoi));
+         * } else {
+         *     doiSection.addItem().addContent(T_itemDoi_no_doi);
+         * }
+         * return doiSection;
+        */
+        return null;
     }
 
 }
