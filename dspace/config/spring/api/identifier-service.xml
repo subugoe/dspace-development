@@ -78,6 +78,7 @@
         <property name='CROSSREF_SCHEME' value='https'/>
         <property name='CROSSREF_HOST' value='api.crossref.org'/>
         <property name='CROSSREF_DEPOSIT_PATH' value='/v2/deposits' />
+        <property name='CROSSREF_TIMEOUT' value="5000"/>
         <property name='disseminationCrosswalkName' value="Crossref" />
     </bean>
     -->

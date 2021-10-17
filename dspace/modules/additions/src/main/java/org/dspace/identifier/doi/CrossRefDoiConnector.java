@@ -16,6 +16,7 @@ import java.util.Date;
 import org.apache.commons.io.FileUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.params.HttpClientParams;
@@ -98,6 +99,11 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
     protected String DEPOSIT_PATH;
 
     /**
+     * Timeout for API responses. Defaults to 5 seconds as processing can be slow.
+     */
+    protected int TIMEOUT = 5000;
+
+    /**
      * Method that sets the scheme for the POST request. Used by Spring's dependency
      * injection
      * 
@@ -137,6 +143,10 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
                 : CROSSREF_DEPOSIT_PATH;
 
         this.DEPOSIT_PATH = CROSSREF_DEPOSIT_PATH;
+    }
+
+    public void setCROSSREF_TIMEOUT(int CROSSREF_TIMEOUT) {
+        this.TIMEOUT = CROSSREF_TIMEOUT;
     }
 
     protected DisseminationCrosswalk prepareXwalk(String type)
@@ -498,6 +508,9 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
         try
         {
             httppost = new HttpPost(uribuilder.build());
+            RequestConfig requestConfig = RequestConfig.custom()
+                    .setConnectionRequestTimeout(TIMEOUT).setSocketTimeout(TIMEOUT).build();
+            httppost.setConfig(requestConfig);
         } catch (URISyntaxException e)
         {
             log.error("The URL we constructed to deposit a new DOI"
@@ -553,39 +566,50 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
     protected void handleErrorCodes(int statusCode, String doi, String content) throws DOIIdentifierException
     {
         switch (statusCode) {
-        // we get a 401 if we forgot to send credentials or if the username
-        // and password did not match.
-        case (400): {
-            log.info("Crossref did not accept the sent request.");
-            log.info(String.format("The response was: {}", content));
-            throw new DOIIdentifierException("Crossref did not accept the sent request.",
-                    DOIIdentifierException.BAD_REQUEST);
-        }
-        case (401): {
-            log.info("We were unable to authenticate against the DOI registry agency.");
-            log.info(String.format("The response was: {}", content));
-            throw new DOIIdentifierException("Cannot authenticate at the "
-                    + "DOI registry agency. Please check if username " + "and password are set correctly.",
-                    DOIIdentifierException.AUTHENTICATION_ERROR);
-        }
+            // we get a 401 if we forgot to send credentials or if the username
+            // and password did not match.
+            case (400): {
+                log.info("Crossref did not accept the sent request.");
+                log.info(String.format("The response was: {}", content));
+                throw new DOIIdentifierException("Crossref did not accept the sent request.",
+                        DOIIdentifierException.BAD_REQUEST);
+            }
+            case (401): {
+                log.info("We were unable to authenticate against the DOI registry agency.");
+                log.info(String.format("The response was: {}", content));
+                throw new DOIIdentifierException("Cannot authenticate at the "
+                        + "DOI registry agency. Please check if username " + "and password are set correctly.",
+                        DOIIdentifierException.AUTHENTICATION_ERROR);
+            }
 
-        // We get a 403 Forbidden if we are managing a DOI that belongs to
-        // another party or if there is a login problem.
-        case (403): {
-            log.info(String.format("Managing a DOI (%s) was prohibited by the DOI registration agency: %s", doi,
-                    content));
-            throw new DOIIdentifierException("There was an error during submission. DOI could not be registered.",
-                    DOIIdentifierException.FOREIGN_DOI);
-        }
+            // We get a 403 Forbidden if we are managing a DOI that belongs to
+            // another party or if there is a login problem.
+            case (403): {
+                log.info(String.format("Managing a DOI (%s) was prohibited by the DOI registration agency: %s", doi,
+                        content));
+                throw new DOIIdentifierException("There was an error during submission. DOI could not be registered.",
+                        DOIIdentifierException.FOREIGN_DOI);
+            }
 
-        // 500 is documented and signals an internal server error
-        case (500): {
-            log.warn("Caught an http status code 500 while managing DOI " + "{}. Message was: " + content);
-            throw new DOIIdentifierException(
-                    "Crossref API has an internal error. " + "It is temporarily impossible to manage DOIs. "
-                            + "Further information can be found in DSpace log file.",
-                    DOIIdentifierException.INTERNAL_ERROR);
-        }
+            // 500 is documented and signals an internal server error
+            case (500): {
+                log.warn("Caught an http status code 500 while managing DOI " + "{}. Message was: " + content);
+                throw new DOIIdentifierException(
+                        "Crossref API has an internal error. " + "It is temporarily impossible to manage DOIs. "
+                                + "Further information can be found in DSpace log file.",
+                        DOIIdentifierException.INTERNAL_ERROR);
+            }
+
+            // 504 is gateway timeout and means we should increase our client-side timeout
+            case (504): {
+                log.warn("Caught an http status code 504 (gateway timeout) while managing DOI " + "{}. Message was: " + content);
+                throw new DOIIdentifierException(
+                        "Crossref API took too long responding to our request. " +
+                                "Increase the CROSSREF_TIMEOUT in the identifier services spring configuration. " +
+                                "Further information can be found in DSpace log file.",
+                        DOIIdentifierException.INTERNAL_ERROR);
+            }
+
         }
     }
 
@@ -619,6 +643,10 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
             HttpClientParams.setRedirecting(params, false);
 
             httpget = new HttpGet(uribuilder.build());
+            RequestConfig requestConfig = RequestConfig.custom()
+                    .setConnectionRequestTimeout(TIMEOUT).setSocketTimeout(TIMEOUT).build();
+            httpget.setConfig(requestConfig);
+
             httpget.setParams(params);
 
         } catch (URISyntaxException e)
