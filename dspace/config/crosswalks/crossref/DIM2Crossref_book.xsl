@@ -48,7 +48,7 @@
                         <xsl:apply-templates select="//dspace:field[@mdschema='dc' and @element='contributor'  and (@qualifier='author' or @qualifier='editor')]" />
                       </xsl:when>
                       <xsl:otherwise>
-                        <anonymous contributor_role="author" />
+                        <anonymous contributor_role="author" sequence="first" />
                       </xsl:otherwise>
                   </xsl:choose>
 
