@@ -7,16 +7,12 @@
  */
 package org.dspace.identifier.doi;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
-import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.dspace.content.DSpaceObject;
@@ -152,6 +148,13 @@ public abstract class AbstractDoiConnector implements DOIConnector {
     public boolean isDOIRegistered(Context context, DSpaceObject dso, String doi) throws DOIIdentifierException
     {
         DoiResponse response = sendDOIGetRequest(doi);
+
+        if (response != null) {
+            log.debug("Check reg'd DOI response: " + response);
+        } else {
+            log.error("Null or invalid response when checking for an existing / registered DOI " + doi);
+            throw new DOIIdentifierException(DOIIdentifierException.BAD_ANSWER);
+        }
         
         if (response.getStatusCode() == getDoiGetSuccessStatusCode()) {
             // Do we check if doi is reserved generally or for a specified dso?
@@ -366,9 +369,9 @@ public abstract class AbstractDoiConnector implements DOIConnector {
     protected abstract void extractHandleFromResponse( DoiResponse doiResponse, HttpResponse response);
 
     
-    protected class DoiResponse {
-        private int statusCode;
-        private String content;
+    protected static class DoiResponse {
+        private final int statusCode;
+        private final String content;
         private String handle;
 
         public DoiResponse(int statusCode, String content)
@@ -395,5 +398,11 @@ public abstract class AbstractDoiConnector implements DOIConnector {
         {
             this.handle = handle;
         }
+
+        public String toString() {
+            return "status=" + statusCode + ", handle=" +
+                    (handle == null ? "null" : handle) + ", content=" + content;
+        }
     }
+
 }
