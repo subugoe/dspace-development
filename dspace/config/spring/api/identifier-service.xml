@@ -80,6 +80,8 @@
         <property name='CROSSREF_DEPOSIT_PATH' value='/v2/deposits' />
         <property name='CROSSREF_TIMEOUT' value="5000"/>
         <property name='disseminationCrosswalkName' value="Crossref" />
+        <property name="parentIssnField" value="dc.identifier.issn" />
+        <property name="parentDoiField" value="local.identifier.doi" />
     </bean>
     -->
 
