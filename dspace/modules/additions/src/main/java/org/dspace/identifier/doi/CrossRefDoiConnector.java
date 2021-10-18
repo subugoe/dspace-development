@@ -11,7 +11,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.http.HttpEntity;
@@ -104,6 +106,15 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
     protected int TIMEOUT = 5000;
 
     /**
+     * Metadata field used for journal ISSN (used for pre-register validation)
+     */
+    protected String parentIssnField;
+    /**
+     * Metadata field used for parent publication DOI (used for pre-register validation)
+     */
+    protected String parentDoiField;
+    
+    /**
      * Method that sets the scheme for the POST request. Used by Spring's dependency
      * injection
      * 
@@ -145,8 +156,19 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
         this.DEPOSIT_PATH = CROSSREF_DEPOSIT_PATH;
     }
 
+    @Required
     public void setCROSSREF_TIMEOUT(int CROSSREF_TIMEOUT) {
         this.TIMEOUT = CROSSREF_TIMEOUT;
+    }
+    
+    @Required
+    public void setParentIssnField(String parentIssnField) {
+        this.parentIssnField = parentIssnField;
+    }
+    
+    @Required
+    public void setParentDoiField(String parentDoiField) {
+        this.parentDoiField = parentDoiField;
     }
 
     protected DisseminationCrosswalk prepareXwalk(String type)
@@ -256,6 +278,10 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
             throw new DOIIdentifierException("Type of record is missing.");
         }
 
+        // Validate item metadata required by Crossref before proceeding with registration
+        // (or throw a CONVERSION_ERROR exception)
+        validateItemMetadata(dso, typeMd[0].value);
+        
         DisseminationCrosswalk xwalk = this.prepareXwalk(typeMd[0].value);
         if (!xwalk.canDisseminate(dso))
         {
@@ -344,47 +370,7 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
         }
 
         DoiResponse resp = this.sendDepositRequest(doi, root);
-
-        switch (resp.getStatusCode()) {
-        // 200 -> created / ok or with errors
-        case (200): {
-            // needs to check xml content
-            return;
-        }
-        // 400 -> invalid XML
-        case (400): {
-            log.warn("Crossref was unable to understand the XML we send.");
-            log.warn("Crossref Metadata API returned a http status code " + "400: " + resp.getContent());
-            Format format = Format.getCompactFormat();
-            format.setEncoding("UTF-8");
-            XMLOutputter xout = new XMLOutputter(format);
-            log.info("We send the following XML:\n" + xout.outputString(root));
-            throw new DOIIdentifierException("Unable to reserve DOI " + doi
-                    + ". Please inform your administrator or take a look " + " into the log files.",
-                    DOIIdentifierException.BAD_REQUEST);
-        }
-        // 401 -> The user is not authorized to update the DOI.
-        case (401): {
-            log.warn("Crossref returns a 401 unauthorized: " + resp.getContent());
-            throw new DOIIdentifierException("Crossref returns unauthorized.",
-                    DOIIdentifierException.AUTHENTICATION_ERROR);
-        }
-        // 403 -> here was some error during the processing of the submission.
-        case (403): {
-            log.warn("Crossref returns a 403 forbidden, which indicates a submission processing error: "
-                    + resp.getContent());
-            throw new DOIIdentifierException("Crossref returns unauthorized.",
-                    DOIIdentifierException.REGISTRATION_ERROR);
-        }
-        // Catch all other http status code in case we forgot one.
-        default: {
-            log.warn(String.format("While registering the DOI %s, we got a http status code %s and the message \"%s\".",
-                    new String[] { doi, Integer.toString(resp.getStatusCode()), resp.getContent() }));
-            throw new DOIIdentifierException(
-                    "Unable to parse an answer from Crossref API. Please have a look into the DSpace logs.",
-                    DOIIdentifierException.BAD_ANSWER);
-        }
-        }
+        log.debug("Deposit DOI response: " + resp);
     }
 
     /**
@@ -557,26 +543,35 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
     }
 
     /**
-     * 
-     * @param req
+     * Handle status code responses / errors from the API
+     * @param statusCode
      * @param doi
+     * @param content
      * @return
      * @throws DOIIdentifierException
      */
     protected void handleErrorCodes(int statusCode, String doi, String content) throws DOIIdentifierException
     {
         switch (statusCode) {
+            case (200):
+            case (201):
+            case (204):
+            case (301):
+            case (302): {
+                // No error, return (this check is necessary since we include a 'default' case
+                return;
+            }
             // we get a 401 if we forgot to send credentials or if the username
             // and password did not match.
             case (400): {
                 log.info("Crossref did not accept the sent request.");
-                log.info(String.format("The response was: {}", content));
+                log.info(String.format("The response was: %s", content));
                 throw new DOIIdentifierException("Crossref did not accept the sent request.",
                         DOIIdentifierException.BAD_REQUEST);
             }
             case (401): {
                 log.info("We were unable to authenticate against the DOI registry agency.");
-                log.info(String.format("The response was: {}", content));
+                log.info(String.format("The response was: %s", content));
                 throw new DOIIdentifierException("Cannot authenticate at the "
                         + "DOI registry agency. Please check if username " + "and password are set correctly.",
                         DOIIdentifierException.AUTHENTICATION_ERROR);
@@ -585,10 +580,17 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
             // We get a 403 Forbidden if we are managing a DOI that belongs to
             // another party or if there is a login problem.
             case (403): {
-                log.info(String.format("Managing a DOI (%s) was prohibited by the DOI registration agency: %s", doi,
+                log.info(String.format("Managing a DOI (%s) was forbidden by the DOI registration agency: %s", doi,
                         content));
                 throw new DOIIdentifierException("There was an error during submission. DOI could not be registered.",
-                        DOIIdentifierException.FOREIGN_DOI);
+                        DOIIdentifierException.REGISTRATION_ERROR);
+            }
+
+            // 404 Not Found is returned for a DOI that doesn't exist so we don't need to throw an exception
+            // However, if the API path is incorrect this could also be returned, and in that case we'd want an exception...
+            case (404): {
+                log.info("No DOI found: " + doi);
+                throw new DOIIdentifierException("404 returned for request", DOIIdentifierException.DOI_DOES_NOT_EXIST);
             }
 
             // 500 is documented and signals an internal server error
@@ -609,7 +611,14 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
                                 "Further information can be found in DSpace log file.",
                         DOIIdentifierException.INTERNAL_ERROR);
             }
-
+            // Catch all other http status code in case we forgot one.
+            default: {
+                log.warn(String.format("While registering the DOI %s, we got a http status code %s and the message \"%s\".",
+                        doi, statusCode, content));
+                throw new DOIIdentifierException(
+                        "Unable to parse an answer from Crossref API. Please have a look into the DSpace logs.",
+                        DOIIdentifierException.BAD_ANSWER);
+            }
         }
     }
 
@@ -658,7 +667,50 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
             throw new RuntimeException("The URL we constructed to check a DOI "
                     + "produced a URISyntaxException. Please check the configuration parameters!", e);
         }
-        return sendHttpRequest(httpget, doi);
+
+        DoiResponse doiResponse = null;
+
+        try {
+            doiResponse = sendHttpRequest(httpget, doi);
+        } catch(DOIIdentifierException e) {
+            // 404s are actually OK for this check since it just means "not found" but we should log an info line
+            // anyway just to help diagnose problems in case there's a bad URL or network issue going on
+            if (e.getCode() == DOIIdentifierException.DOI_DOES_NOT_EXIST) {
+                log.info("404 NOT FOUND for a 'get DOI' request, which probably means the DOI isn't registered," +
+                        "but may indicate a bad DOI scheme, host, or path or network error.");
+            } else {
+                // If it's not a 404, rethrow
+                throw new DOIIdentifierException(e);
+            }
+        }
+
+        return doiResponse;
+    }
+
+    private void validateItemMetadata(DSpaceObject dso, String type) throws DOIIdentifierException {
+        if ("article".equals(type)) {
+            // Journal articles must have a journal ISSN or DOI to provide as journal metadata
+            String[] issnFieldParts = parentIssnField.split("\\.");
+            String[] doiFieldParts = parentDoiField.split("\\.");
+            if (issnFieldParts.length < 2) {
+                log.error("Invalid ISSN field configured in spring. Should be eg. dc.identifier.issn");
+                throw new DOIIdentifierException(DOIIdentifierException.CONVERSION_ERROR);
+            }
+            if (doiFieldParts.length < 2) {
+                log.error("Invalid parent (journal) DOI field configured in spring. Should be eg. local.identifier.doi");
+                throw new DOIIdentifierException(DOIIdentifierException.CONVERSION_ERROR);
+            }
+            // Get ISSNs
+            Metadatum[] issns = dso.getMetadata(issnFieldParts[0], issnFieldParts[1],
+                    (issnFieldParts.length == 3 ? issnFieldParts[2] : null), Item.ANY);
+            // Get DOIs
+            Metadatum[] dois = dso.getMetadata(doiFieldParts[0], doiFieldParts[1],
+                    (doiFieldParts.length == 3 ? doiFieldParts[2] : null), Item.ANY);
+            if (issns.length == 0 && dois.length == 0) {
+                log.error("article type must supply at least one ISSN or DOI to identify the parent publication.");
+                throw new DOIIdentifierException(DOIIdentifierException.CONVERSION_ERROR);
+            }
+        }
     }
 
     @Override
@@ -690,6 +742,20 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
         }
 
         return handlePrefix + dso.getHandle();
+    }
+
+    // TODO - determine if this is useful for comparison
+    protected List<String> getDsoUrls(DSpaceObject dso, Context context) {
+        List<String> urls = new ArrayList<>();
+        String otherHandlePrefixesValue = configurationService.getProperty("handle.additional.prefixes");
+        if (otherHandlePrefixesValue != null) {
+            String[] otherHandlePrefixes = otherHandlePrefixesValue.split("\\s,\\s");
+            for (String otherHandlePrefix : otherHandlePrefixes) {
+                urls.add(otherHandlePrefix + dso.getHandle());
+            }
+        }
+
+        return urls;
     }
 
 }
