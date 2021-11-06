@@ -586,11 +586,10 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
                         DOIIdentifierException.REGISTRATION_ERROR);
             }
 
-            // 404 Not Found is returned for a DOI that doesn't exist so we don't need to throw an exception
-            // However, if the API path is incorrect this could also be returned, and in that case we'd want an exception...
+            // 404 Not Found is returned for a DOI that doesn't exist so we must not throw an exception
             case (404): {
                 log.info("No DOI found: " + doi);
-                throw new DOIIdentifierException("404 returned for request", DOIIdentifierException.DOI_DOES_NOT_EXIST);
+                return;
             }
 
             // 500 is documented and signals an internal server error
