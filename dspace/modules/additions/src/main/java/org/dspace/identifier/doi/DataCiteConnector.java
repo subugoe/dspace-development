@@ -87,8 +87,8 @@ public class DataCiteConnector extends AbstractDoiConnector
     /** 
      * DisseminationCrosswalk to map local metadata into DataCite metadata.
      * The name of the crosswalk is set by spring dependency injection using
-     * {@link setDisseminationCrosswalk(String) setDisseminationCrosswalk} which
-     * instantiates the crosswalk.
+     * {@link #setDisseminationCrosswalkName(String) setDisseminationCrosswalkName}
+     * and {@link #prepareXwalk()} that actually loads the crosswalk.
      */
     protected DisseminationCrosswalk xwalk;
     
@@ -824,21 +824,9 @@ public class DataCiteConnector extends AbstractDoiConnector
     }
 
     @Override
-    protected void extractHandleFromResponse(DoiResponse doiResponse, HttpResponse response)
+    protected void extractUrlFromResponse(DoiResponse doiResponse, HttpResponse response)
     {
         // DataCite returns the handle in the body (which is in the content now)
-        doiResponse.setHandle(doiResponse.getContent());
+        doiResponse.setUrl(doiResponse.getContent());
     }
-    
-    protected String getDsoUrl(DSpaceObject dso, Context context) {
-        try
-        {
-            return HandleManager.resolveToURL(context, dso.getHandle());
-        } catch (SQLException e)
-        {
-            log.error("Error in database connection: " + e.getMessage());
-            throw new RuntimeException(e);
-        }
-    }
-
 }

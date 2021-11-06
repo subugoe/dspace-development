@@ -6,12 +6,10 @@
  * http://www.dspace.org/license/
  */
 package org.dspace.identifier.doi;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -38,13 +36,16 @@ import org.dspace.content.crosswalk.DisseminationCrosswalk;
 import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Context;
 import org.dspace.core.PluginManager;
+import org.dspace.handle.HandleManager;
 import org.dspace.identifier.DOI;
 import org.dspace.identifier.IdentifierException;
 import org.jdom.Document;
 import org.jdom.Element;
+import org.jdom.JDOMException;
 import org.jdom.Namespace;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
+import org.jdom.xpath.XPath;
 import org.springframework.beans.factory.annotation.Required;
 
 /**
@@ -264,7 +265,8 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
         if (this.isDOIRegistered(context, doi))
         {
             // if it is registered for another object we should notify an admin
-            if (!this.isDOIRegistered(context, dso, doi))
+            if (!ConfigurationManager.getBooleanProperty("identifier.doi.crossref.override", false)
+                    && !this.isDOIRegistered(context, dso, doi))
             {
                 // DOI is reserved for another object
                 log.warn(String.format("DOI {} is registered for another object already.", doi));
@@ -348,6 +350,12 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
         }
 
         addHeadInfo(root, dso);
+        try {
+            addDoi(context, root, doi, dso);
+        } catch (SQLException ex) {
+            log.debug("Error while ingesting doi into crossref xml", ex);
+            throw new RuntimeException(ex);
+        }
 
         // if this is the first time we are registering a resource,
         // we have to make sure we remove the DOI we've added for the XML generation
@@ -438,6 +446,55 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
 
         return root.getChild("head", Namespace.getNamespace(CROSSREF_SCHEMA)).addContent(registrant);
     }
+    
+    /**
+     * Add the doi to the xml that will be send to CrossRef. We expect the XML to contain exactly one node doi_data
+     * into which we will ingest the doi information.
+     * @param c org.dspace.core.Context
+     * @param root The XML into which the doi information shall be ingested.
+     * @param doi The doi to ingest.
+     * @param dso The DSpaceObject for which the DOI is registered, to create the URL to which the DOI shall point to.
+     * @return The XML with the ingested DOI information.
+     * @throws SQLException
+     */
+    protected Element addDoi(Context c, Element root, String doi, DSpaceObject dso) throws SQLException {
+        // create the information to ingest (doi and url)
+        Element doiInformation = new Element("doi", CROSSREF_SCHEMA);
+        doiInformation.addContent(doi.substring(SCHEME.length() -1));
+        Element resource = new Element("resource", CROSSREF_SCHEMA);
+        resource.addContent(HandleManager.resolveToURL(c, dso.getHandle()));
+    
+        // find the node into which the information shall be ingested
+        List<Element> nodes = null;
+        try {
+            // JDOM seem to need the heading dot. Without it the expression doesn't finde the node, even if that is surprising.
+            XPath path = XPath.newInstance(".//x:doi_data");
+            // jdom 1 does not support a default namespace, add it explicitly.
+            path.addNamespace("x", root.getNamespaceURI());
+            nodes = path.selectNodes(root);
+        } catch (JDOMException ex) {
+            log.error("JDOMException: ", ex);
+            throw new RuntimeException(ex);
+        }
+    
+        if (nodes.size() != 1 ) {
+            log.error("Trying to create invalid XML for Crossref. There should be exactly one node 'doi_data'.");
+            throw new IllegalStateException("Trying to create invalid XML for Crossref. There should be one node 'doi_data' only.");
+        }
+        
+        Element doiData = nodes.get(0);
+        doiData.addContent(doiInformation);
+        doiData.addContent(resource);
+        
+        if (log.isDebugEnabled()) {
+            Format format = Format.getCompactFormat();
+            format.setEncoding("UTF-8");
+            XMLOutputter xout = new XMLOutputter(format);
+            log.debug("Ingested " + doi + ":");
+            log.debug(xout.outputString(root));
+        }
+        return root;
+    }
 
     /**
      * This method gets the doi from the passed object if it already has one.
@@ -465,7 +522,8 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
     public void updateMetadata(Context context, DSpaceObject dso, String doi) throws DOIIdentifierException
     {
         // check if doi is registered for another object
-        if (!this.isDOIRegistered(context, dso, doi) && this.isDOIRegistered(context, doi))
+        if (!ConfigurationManager.getBooleanProperty("identifier.doi.crossref.override", false)
+                && !this.isDOIRegistered(context, dso, doi) && this.isDOIRegistered(context, doi))
         {
             log.warn("Trying to update metadata for DOI {}, that is reserved for another dso.", doi);
             throw new DOIIdentifierException("Trying to update metadta for a DOI that is reserved for another object.",
@@ -721,40 +779,13 @@ public class CrossRefDoiConnector extends AbstractDoiConnector {
     }
 
     @Override
-    protected void extractHandleFromResponse(DoiResponse doiResponse, HttpResponse response)
+    protected void extractUrlFromResponse(DoiResponse doiResponse, HttpResponse response)
     {
-        log.info("Getting handle");
+        log.debug("Getting handle");
         if (response != null && response.containsHeader(REDIRECT_HEADER))
         {
-            doiResponse.setHandle(response.getFirstHeader(REDIRECT_HEADER).getValue());
-            log.info("set to: " + doiResponse.getHandle());
+            doiResponse.setUrl(response.getFirstHeader(REDIRECT_HEADER).getValue());
+            log.debug("set to: " + doiResponse.getUrl());
         }
     }
-
-    @Override
-    protected String getDsoUrl(DSpaceObject dso, Context context)
-    {
-        String handlePrefix = ConfigurationManager.getProperty("handle.canonical.prefix");
-        if (handlePrefix == null || handlePrefix.length() == 0)
-        {
-            handlePrefix = "http://hdl.handle.net/";
-        }
-
-        return handlePrefix + dso.getHandle();
-    }
-
-    // TODO - determine if this is useful for comparison
-    protected List<String> getDsoUrls(DSpaceObject dso, Context context) {
-        List<String> urls = new ArrayList<>();
-        String otherHandlePrefixesValue = configurationService.getProperty("handle.additional.prefixes");
-        if (otherHandlePrefixesValue != null) {
-            String[] otherHandlePrefixes = otherHandlePrefixesValue.split("\\s,\\s");
-            for (String otherHandlePrefix : otherHandlePrefixes) {
-                urls.add(otherHandlePrefix + dso.getHandle());
-            }
-        }
-
-        return urls;
-    }
-
 }
